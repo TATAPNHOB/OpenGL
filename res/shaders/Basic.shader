@@ -10,9 +10,9 @@ void main()
 #shader fragment
 #version 330 core
 layout(location = 0) out vec4 color;
-uniform vec4 u_color;
+uniform float u_time;
 
 void main()
 {
-    color = u_color;
+    color = vec4(sin(u_time * 2) / 2 + 0.5, 0., 0., 1.);
 }

@@ -2,9 +2,13 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <cmath>
+#include <math.h>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
+#define _USE_MATH_DEFINES
 
 #define ASSERT(x) if (!(x)) __debugbreak();
 #define glCall(x) glClearError();\
@@ -151,6 +155,7 @@ static int CreateShaders(const std::string& vertexShader, const std::string& fra
     return program;
 }
 
+
 int main(void)
 {
     GLFWwindow* window;
@@ -180,7 +185,7 @@ int main(void)
 
     std::cout << glGetString(GL_VERSION) << std::endl;
 
-    float positions[] = {
+   /* float positions[] = {
         -0.5f,  0.5f,
         -0.5f, -0.5f,
          0.5f,  0.5f,
@@ -189,7 +194,41 @@ int main(void)
     unsigned int indices[]{
         0, 1, 2,
         1, 2, 3
-    };
+    };*/
+
+    float angle_inc = 10.0f;
+    float angle = 0.0f;
+    const float PI = 2 * acos(0.0f);
+
+    int pos_count = (int)(360.0f / angle_inc);
+    int index_count = (pos_count) * 3;
+
+    float positions[1000];
+    
+    unsigned int indices[1000];
+
+    std::cout << "pos: " << pos_count << std::endl << "index: " << index_count << std::endl;
+
+    //pos[0,1] reserved for center
+    positions[0] = 0.0f;
+    positions[1] = 0.0f;
+    pos_count += 1;
+
+    for (int i = 0; i < pos_count * 2 - 2; i += 2)
+    {
+        positions[i + 2] = cos(angle / 360 * 2 * PI) / 2;
+        positions[i + 3] = sin(angle / 360 * 2 * PI) / 2;
+        angle += angle_inc;
+        //std::cout << "x: " << positions[i + 2] << "\ty: " << positions[i + 3] << " : angle: " << angle << std::endl;
+    }
+
+    for (int i = 0; i < pos_count; i += 1)
+    {
+        indices[3 * i] = 0;
+        indices[3 * i + 1] = i + 1;
+        indices[3 * i + 2] = i + 2;
+        if (i == pos_count - 2) indices[3 * i + 2] = 1;
+    }
 
     unsigned int vao;
 
@@ -200,7 +239,7 @@ int main(void)
 
     glCall(glGenBuffers(1, &buffer));
     glCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-    glCall(glBufferData(GL_ARRAY_BUFFER, 4*2 * sizeof(float), positions, GL_STATIC_DRAW));
+    glCall(glBufferData(GL_ARRAY_BUFFER, pos_count * 2 * sizeof(float), positions, GL_STATIC_DRAW));
 
     glCall(glEnableVertexAttribArray(0));
     glCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0));
@@ -209,16 +248,15 @@ int main(void)
 
     glCall(glGenBuffers(1, &ibo));
     glCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-    glCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));
+    glCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(unsigned int), indices, GL_STATIC_DRAW));
 
     ShaderProgramSources sps = ParseShader("res/shaders/Basic.shader");
 
     unsigned int shaders = CreateShaders(sps.VertexSource, sps.FragmentSource);
     glCall(glUseProgram(shaders));
 
-    glCall(GLint u_colorLoc = glGetUniformLocation(shaders, "u_color"));
-    ASSERT(u_colorLoc != -1);
-    glCall(glUniform4f(u_colorLoc, 1.0f, 1.0f, 1.0f, 1.0f));
+    glCall(GLint u_timeLoc = glGetUniformLocation(shaders, "u_time"));
+    ASSERT(u_timeLoc != -1);
 
 
     //unbind everything
@@ -245,11 +283,12 @@ int main(void)
         glCall(glBindVertexArray(vao));
         glCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
 
-        if (r > 1.0f || r < 0.0f) i = -i;
-        r += i;
-        glCall(glUniform4f(u_colorLoc, r, 1.0f, 1.0f, 1.0f));
+        float time = glfwGetTime();
+        
+        glCall(glUniform1f(u_timeLoc, time));
 
-        glCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+
+        glCall(glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, nullptr));
 
 
         /* Swap front and back buffers */
